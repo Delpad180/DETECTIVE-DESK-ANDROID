@@ -345,7 +345,6 @@ func _send_question(index: int, raw: String, proof_id: int) -> void:
     _add_note("Pregunta a " + suspect.name + ": " + question)
     _save_game()
     open_page("Interrogatorios")
-    _show_interview(index)
 
 func _page_lab() -> void:
     _card("LABORATORIO FORENSE", "Solicita análisis complementarios. Los resultados se incorporan al expediente como información provisional.")
