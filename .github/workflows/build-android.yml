@@ -26,9 +26,9 @@ jobs:
       - name: Instalar Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Instalar componentes Android
+      - name: Instalar componentes Android requeridos por Godot 4.3
         run: |
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest" "cmake;3.10.2.4988404" "ndk;23.2.8568313"
           yes | sdkmanager --licenses
 
       - name: Instalar Godot 4.3 con plantillas de exportación
@@ -40,6 +40,12 @@ jobs:
 
       - name: Comprobar Godot
         run: godot --version
+
+      - name: Preparar clave de depuración Android
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Preparar proyecto y configuración Android
         shell: bash
@@ -84,6 +90,10 @@ jobs:
 
       - name: Exportar APK de depuración
         run: godot --headless --path . --export-debug "Android" build/DetectiveDesk.apk
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ runner.temp }}/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
 
       - name: Publicar APK como artefacto descargable
         uses: actions/upload-artifact@v4
