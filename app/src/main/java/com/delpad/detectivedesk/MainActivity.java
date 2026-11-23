@@ -27,15 +27,15 @@ public class MainActivity extends Activity {
     private final ArrayList<String> log=new ArrayList<>();
     private final HashMap<Integer,Integer> pressure=new HashMap<>();
     private final HashMap<Integer,Integer> questions=new HashMap<>();
-    private final String[] names={"Álvaro Méndez","Lucía Ferrer","Iván Robles"};
-    private final String[] roles={"Encargado del muelle","Socia comercial","Guardia de seguridad"};
-    private final String[] profiles={
+    private String[] names={"Álvaro Méndez","Lucía Ferrer","Iván Robles"};
+    private String[] roles={"Encargado del muelle","Socia comercial","Guardia de seguridad"};
+    private String[] profiles={
         "38 años · Encargado del muelle · Acceso habitual al almacén. Conocía los horarios de carga y descarga.",
         "34 años · Socia comercial · Mantenía operaciones económicas con Daniel. Su relación se deterioró durante el último mes.",
         "46 años · Guardia de seguridad · Responsable del turno nocturno. Conocía las cámaras y los puntos ciegos."
     };
-    private final String[] evidence={"Informe de escena","Registro de llamadas","Cámara del muelle","Informe médico","Huella parcial","Registro de accesos","Correo de Daniel","Plano del almacén"};
-    private final String[] details={
+    private String[] evidence={"Informe de escena","Registro de llamadas","Cámara del muelle","Informe médico","Huella parcial","Registro de accesos","Correo de Daniel","Plano del almacén"};
+    private String[] details={
         "Daniel Ortega fue encontrado en el Almacén 7 a las 23:40. No se aprecian signos claros de entrada forzada. La posición de varios objetos debe documentarse antes de extraer conclusiones.",
         "Llamada entrante de cuatro minutos a las 22:58 desde un número prepago. El titular no consta en el expediente inicial.",
         "Una figura con chaqueta clara aparece cerca del almacén a las 23:17. La imagen no permite reconocer el rostro. La hora de la cámara debe contrastarse con el registro del sistema.",
@@ -45,8 +45,10 @@ public class MainActivity extends Activity {
         "Borrador recuperado: Daniel pide revisar unas cuentas antes del viernes. No se conserva el hilo completo ni el adjunto.",
         "Plano técnico: puerta principal, acceso de servicio y pasillo de cámaras. El punto ciego del pasillo no cubre el interior del almacén."
     };
-    private final String[] timeline={"22:51 — Apertura registrada con credencial de mantenimiento","22:58 — Llamada desde número prepago","23:10–23:35 — Intervalo médico estimado","23:17 — Figura captada junto al muelle","23:40 — Hallazgo y aviso a emergencias"};
+    private String[] timeline={"22:51 — Apertura registrada con credencial de mantenimiento","22:58 — Llamada desde número prepago","23:10–23:35 — Intervalo médico estimado","23:17 — Figura captada junto al muelle","23:40 — Hallazgo y aviso a emergencias"};
     private EditText questionInput;
+    private String caseCode="RPD-026-114", caseTitle="MUERTE EN EL ALMACÉN 7", victimName="Daniel Ortega", caseLocation="Distrito portuario, Almacén 7";
+    private int generatedCases=0;
 
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
@@ -56,6 +58,8 @@ public class MainActivity extends Activity {
         unlocked.addAll(getPreferences(0).getStringSet("unlocked",new HashSet<>()));
         notes.addAll(getPreferences(0).getStringSet("notes",new HashSet<>()));
         for(int i=0;i<3;i++){pressure.put(i,0);questions.put(i,0);}
+        generatedCases=getPreferences(0).getInt("generated_cases",0);
+        if(generatedCases>0) buildProceduralCase(getPreferences(0).getLong("case_seed",generatedCases));
         buildShell(); showPage("Inicio");
     }
     private int dp(float n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
@@ -106,14 +110,14 @@ public class MainActivity extends Activity {
         TextView h=text(p.toUpperCase(Locale.ROOT),21,white,true);content.addView(h);
         switch(p){
             case "Inicio":
-                card("EXPEDIENTE ACTIVO  /  RPD-026-114","MUERTE EN EL ALMACÉN 7\nVíctima: Daniel Ortega, 42 años\nEstado: Investigación abierta · Prioridad alta");
+                card("EXPEDIENTE ACTIVO  /  "+caseCode,caseTitle+"\nVíctima: "+victimName+"\nEstado: Investigación abierta · Prioridad alta");
                 card("CENTRO DE OPERACIONES","Pruebas examinadas: "+examined.size()+" / "+evidence.length+"\nEntrevistas iniciadas: "+unlocked.size()+" / 3\nNotas del investigador: "+notes.size());
                 action("CONTINUAR INVESTIGACIÓN",()->showPage("Expediente"));
                 action("ABRIR INTERROGATORIOS",()->showPage("Interrogatorios"));
                 card("OBJETIVOS PENDIENTES","1. Examinar todas las pruebas.\n2. Contrastar las coartadas.\n3. Identificar contradicciones.\n4. Elaborar una conclusión respaldada por indicios.");
                 break;
             case "Expediente":
-                card("RPD-026-114  |  MUERTE EN EL ALMACÉN 7","Lugar: Distrito portuario, Almacén 7\nHallazgo: 23:40\nVíctima: Daniel Ortega\nInvestigador responsable: Inspector de guardia");
+                card(caseCode+"  |  "+caseTitle,"Lugar: "+caseLocation+"\nHallazgo: "+timeline[timeline.length-1].split("—")[0].trim()+"\nVíctima: "+victimName+"\nInvestigador responsable: Inspector de guardia");
                 card("RESUMEN DEL CASO","Daniel Ortega fue hallado sin vida en un almacén al que varias personas tenían acceso. La investigación debe determinar qué ocurrió, quién tuvo oportunidad y qué indicios pueden corroborarse.");
                 card("PERSONAS DE INTERÉS",names[0]+" — "+roles[0]+"\n"+names[1]+" — "+roles[1]+"\n"+names[2]+" — "+roles[2]);
                 card("PRUEBAS DEL EXPEDIENTE","Selecciona cada elemento para abrir su ficha, registrar su examen y consultar qué puede demostrar y qué no.");
@@ -149,12 +153,59 @@ public class MainActivity extends Activity {
                 action("ABRIR INTERROGATORIOS",()->showPage("Interrogatorios"));
                 break;
             case "Informe":
-                card("INFORME PROVISIONAL DE INVESTIGACIÓN","Expediente RPD-026-114\nVíctima: Daniel Ortega\nPruebas examinadas: "+examined.size()+"/"+evidence.length+"\nPersonas entrevistadas: "+unlocked.size()+"/3");
+                card("INFORME PROVISIONAL DE INVESTIGACIÓN","Expediente "+caseCode+"\nVíctima: "+victimName+"\nPruebas examinadas: "+examined.size()+"/"+evidence.length+"\nPersonas entrevistadas: "+unlocked.size()+"/3");
                 card("VALORACIÓN","Con la información actual no es posible atribuir de forma concluyente la autoría a una persona. Deben corroborarse las coartadas, la credencial de acceso y la identidad de la figura captada.");
-                action("COPIAR INFORME",()->{String report="INFORME RPD-026-114\nMuerte en el Almacén 7\nPruebas examinadas: "+examined+"\nNotas: "+notes+"\nConclusión: investigación abierta; no existe identificación concluyente.";((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(android.content.ClipData.newPlainText("Informe Detective Desk",report));Toast.makeText(this,"Informe copiado",Toast.LENGTH_SHORT).show();});
+                action("CERRAR EXPEDIENTE Y GENERAR OTRO CASO",()->new android.app.AlertDialog.Builder(this).setTitle("Cerrar expediente").setMessage("El caso actual quedará archivado en esta sesión y se generará una investigación nueva con víctima, escenario, sospechosos e indicios diferentes. ¿Continuar?").setNegativeButton("Cancelar",null).setPositiveButton("Cerrar y generar", (d,w)->{generatedCases++;long seed=System.currentTimeMillis();getPreferences(0).edit().putInt("generated_cases",generatedCases).putLong("case_seed",seed).apply();buildProceduralCase(seed);showPage("Inicio");Toast.makeText(this,"Nuevo expediente generado",Toast.LENGTH_LONG).show();}).show());
+                action("COPIAR INFORME",()->{String report="INFORME "+caseCode+"\n"+caseTitle+"\nVíctima: "+victimName+"\nPruebas examinadas: "+examined+"\nNotas: "+notes+"\nConclusión: investigación abierta; no existe identificación concluyente.";((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(android.content.ClipData.newPlainText("Informe Detective Desk",report));Toast.makeText(this,"Informe copiado",Toast.LENGTH_SHORT).show();});
                 break;
         }
         footer.setText("● "+examined.size()+"/"+evidence.length+" PRUEBAS  |  PROGRESO GUARDADO EN EL DISPOSITIVO");
+    }
+    private void buildProceduralCase(long seed){
+        Random r=new Random(seed);
+        String[] victims={"Marcos Vidal","Elena Ríos","Sergio Campos","Nuria Salas","Adrián Molina","Clara Fuentes","Pablo Serrano","Irene Castillo"};
+        String[] scenes={"MUERTE EN EL HOTEL MIRADOR","HOMICIDIO EN LA NAVE 12","MUERTE EN EL PARKING CENTRAL","CASO DEL DESPACHO CERRADO","HOMICIDIO EN LA ESTACIÓN NORTE","MUERTE EN LA CLÍNICA VIEJA"};
+        String[] places={"Hotel Mirador, habitación 308","Polígono industrial, nave 12","Parking Central, planta -2","Edificio de oficinas, despacho 406","Estación Norte, almacén de equipajes","Clínica Santa Isabel, archivo"};
+        String[] first={"Álvaro","Lucía","Iván","Marta","Diego","Carmen","Raúl","Sofía","Hugo","Paula","Andrés","Inés"};
+        String[] last={"Méndez","Ferrer","Robles","Vega","Santos","Navarro","Prieto","Romero","León","Cano","Iglesias","Fuentes"};
+        String[] jobs={"Director de operaciones","Administrativa","Técnico de mantenimiento","Socio comercial","Vigilante nocturno","Responsable de compras","Recepcionista","Encargada de turno","Conserje","Proveedor externo"};
+        String[] evidenceNames={"Informe de escena","Registro de llamadas","Grabación de cámaras","Informe médico","Rastro dactilar","Registro de accesos","Mensajes recuperados","Plano del lugar"};
+        String[] eventNames={"Acceso registrado","Comunicación telefónica","Último movimiento confirmado","Intervalo médico estimado","Cámara detecta una presencia","Hallazgo del cuerpo"};
+        victimName=victims[r.nextInt(victims.length)];
+        caseTitle=scenes[r.nextInt(scenes.length)];
+        caseLocation=places[r.nextInt(places.length)];
+        caseCode=String.format(Locale.ROOT,"RPD-%02d-%03d",27+generatedCases/100,100+r.nextInt(900));
+        names=new String[3];roles=new String[3];profiles=new String[3];
+        HashSet<String> used=new HashSet<>();
+        for(int i=0;i<3;i++){
+            String n;do{n=first[r.nextInt(first.length)]+" "+last[r.nextInt(last.length)];}while(used.contains(n));used.add(n);
+            names[i]=n;roles[i]=jobs[r.nextInt(jobs.length)];
+            profiles[i]=(30+r.nextInt(27))+" años · "+roles[i]+" · "+(i==0?"Tenía acceso habitual al lugar.":i==1?"Mantenía una relación profesional con la víctima.":"Conocía los procedimientos y movimientos del recinto.");
+        }
+        evidence=evidenceNames.clone();
+        String[] descriptions={
+            "La inspección inicial documenta la posición de objetos y posibles indicios en "+caseLocation+". Deben preservarse antes de extraer conclusiones.",
+            "El registro refleja una comunicación próxima al intervalo investigado. La titularidad y el usuario real requieren comprobación.",
+            "La grabación sitúa una presencia en el entorno, pero la calidad disponible no permite identificarla de forma concluyente.",
+            "El informe establece un intervalo médico aproximado. No equivale a una hora exacta ni identifica a una persona.",
+            "Se recuperó un rastro parcial. Su valor depende de la comparación, cadena de custodia y calidad de la muestra.",
+            "El sistema registra el uso de una credencial. El registro no demuestra quién la llevaba físicamente.",
+            "Se recuperaron mensajes que apuntan a un desacuerdo previo. El contexto completo todavía debe verificarse.",
+            "El plano muestra accesos y zonas de vigilancia. No demuestra por sí solo que alguien utilizara un acceso concreto."
+        };
+        details=descriptions;
+        int h=20+r.nextInt(4),m= r.nextInt(60);
+        timeline=new String[]{
+            String.format(Locale.ROOT,"%02d:%02d — "+eventNames[0],h-1,r.nextInt(60)),
+            String.format(Locale.ROOT,"%02d:%02d — "+eventNames[1],h-1,(m+8)%60),
+            String.format(Locale.ROOT,"%02d:%02d — "+eventNames[2],h,(m+12)%60),
+            String.format(Locale.ROOT,"%02d:%02d — "+eventNames[3],h,(m+18)%60),
+            String.format(Locale.ROOT,"%02d:%02d — "+eventNames[4],h,(m+24)%60),
+            String.format(Locale.ROOT,"%02d:%02d — "+eventNames[5],h,(m+35)%60)
+        };
+        examined.clear();unlocked.clear();notes.clear();log.clear();
+        pressure.clear();questions.clear();for(int i=0;i<3;i++){pressure.put(i,0);questions.put(i,0);}
+        persist();
     }
     private void examine(int i){
         examined.add(evidence[i]);persist();
