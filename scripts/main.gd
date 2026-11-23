@@ -243,7 +243,7 @@ func _page_interrogation() -> void:
     for i in range(suspects.size()):
         var idx := i
         var person: Dictionary = suspects[idx]
-        _button(person.name + "  ·  " + person.job, func(): selected_suspect = idx; _show_interview(idx), selector)
+        _button(person.name + "  ·  " + person.job, func(): selected_suspect = idx; open_page("Interrogatorios"), selector)
     _show_interview(selected_suspect)
 
 func _show_interview(index: int) -> void:
