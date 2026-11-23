@@ -236,7 +236,7 @@ public class MainActivity extends Activity {
     private void requestRemoteAnswer(String question,int who){
         if(aiBusy)return;aiBusy=true;
         final String base=serverUrl;
-        final JSONArray historyCopy=new JSONArray(aiHistory.toString());
+        final String historyJson=aiHistory.toString();
         network.execute(()->{
             String answer=null,error=null;
             HttpURLConnection conn=null;
@@ -246,7 +246,7 @@ public class MainActivity extends Activity {
                 body.put("suspect",names[who]);
                 body.put("suspect_profile",profiles[who]);
                 body.put("case_context","Expediente RPD-026-114: Muerte en el Almacén 7. Víctima Daniel Ortega, 42 años. Pruebas examinadas: "+knownEvidenceSummary()+". Hechos y fichas: "+String.join(" | ",Arrays.asList(details))+". Cronología: "+String.join(" | ",Arrays.asList(timeline))+". Notas del investigador: "+String.join(" | ",notes));
-                body.put("history",historyCopy);
+                body.put("history",new JSONArray(historyJson));
                 conn=(HttpURLConnection)new URL(base+"/api/chat").openConnection();
                 conn.setRequestMethod("POST");conn.setConnectTimeout(15000);conn.setReadTimeout(90000);
                 conn.setDoOutput(true);conn.setRequestProperty("Content-Type","application/json; charset=utf-8");
