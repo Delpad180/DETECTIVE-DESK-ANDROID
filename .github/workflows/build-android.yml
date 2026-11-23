@@ -32,7 +32,6 @@ jobs:
       - name: Instalar componentes Android requeridos por Godot 4.3
         shell: bash
         run: |
-          yes | sdkmanager --licenses
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmake;3.10.2.4988404" "ndk;23.2.8568313"
 
       - name: Instalar Godot 4.3 con plantillas de exportación
