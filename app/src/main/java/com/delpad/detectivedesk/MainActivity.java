@@ -24,6 +24,9 @@ public class MainActivity extends Activity {
     private final Set<String> examined=new HashSet<>();
     private final Set<String> unlocked=new HashSet<>();
     private final ArrayList<String> notes=new ArrayList<>();
+    private final Set<String> connections=new HashSet<>();
+    private int threadColorIndex=0;
+    private EvidenceBoardView evidenceBoard;
     private final ArrayList<String> log=new ArrayList<>();
     private final HashMap<Integer,Integer> pressure=new HashMap<>();
     private final HashMap<Integer,Integer> questions=new HashMap<>();
@@ -57,6 +60,7 @@ public class MainActivity extends Activity {
         examined.addAll(getPreferences(0).getStringSet("examined",new HashSet<>()));
         unlocked.addAll(getPreferences(0).getStringSet("unlocked",new HashSet<>()));
         notes.addAll(getPreferences(0).getStringSet("notes",new HashSet<>()));
+        connections.addAll(getPreferences(0).getStringSet("board_connections",new HashSet<>()));
         for(int i=0;i<3;i++){pressure.put(i,0);questions.put(i,0);}
         generatedCases=getPreferences(0).getInt("generated_cases",0);
         if(generatedCases>0) buildProceduralCase(getPreferences(0).getLong("case_seed",generatedCases));
@@ -103,7 +107,8 @@ public class MainActivity extends Activity {
     }
     private void persist(){
         getPreferences(0).edit().putStringSet("examined",new HashSet<>(examined))
-            .putStringSet("unlocked",new HashSet<>(unlocked)).putStringSet("notes",new HashSet<>(notes)).apply();
+            .putStringSet("unlocked",new HashSet<>(unlocked)).putStringSet("notes",new HashSet<>(notes))
+            .putStringSet("board_connections",new HashSet<>(connections)).apply();
     }
     private void showPage(String p){
         page=p;content.removeAllViews();
@@ -132,9 +137,16 @@ public class MainActivity extends Activity {
                 for(int i=0;i<3;i++){final int n=i;card(names[i]+"  ·  "+roles[i],profiles[i]+"\nPreguntas realizadas: "+questions.get(i));action("INICIAR / CONTINUAR ENTREVISTA",()->interview(n));}
                 break;
             case "Tablero":
-                card("TABLERO DE DEDUCCIONES","Pruebas examinadas: "+examined.size()+" / "+evidence.length);
-                card("HECHOS CONFIRMADOS","• La víctima fue hallada a las 23:40.\n• El intervalo médico estimado es 23:10–23:35.\n• Una figura aparece a las 23:17.\n• Hubo una llamada a las 22:58.\n• Se registra una apertura a las 22:51.");
-                card("HIPÓTESIS ABIERTAS","• La identidad de la figura no está confirmada.\n• La titularidad del número prepago no consta.\n• La credencial no demuestra quién la utilizó.\n• La huella parcial no identifica a una persona.");
+                card("TABLERO DE CONEXIONES","Selecciona una evidencia y después otra para unirlas con un hilo. Puedes conectar una misma pista con varias.");
+                LinearLayout palette=new LinearLayout(this); palette.setOrientation(LinearLayout.HORIZONTAL);
+                String[] colorNames={"ROJO","AZUL","AMARILLO","VERDE","MORADO"};
+                int[] colors={Color.rgb(235,75,75),Color.rgb(65,145,245),Color.rgb(245,195,65),Color.rgb(65,195,125),Color.rgb(175,105,235)};
+                for(int c=0;c<colors.length;c++){ final int ci=c; Button cb=button(colorNames[c]); cb.setTextSize(10); cb.setOnClickListener(v->{threadColorIndex=ci;if(evidenceBoard!=null)evidenceBoard.setThreadColor(colors[ci]);Toast.makeText(this,"Hilo "+colorNames[ci].toLowerCase(Locale.ROOT)+" seleccionado",Toast.LENGTH_SHORT).show();}); palette.addView(cb,new LinearLayout.LayoutParams(0,dp(42),1)); }
+                content.addView(palette,margin(0,0,0,8));
+                evidenceBoard=new EvidenceBoardView(this,evidence,examined,connections,colors[threadColorIndex],()->persist());
+                content.addView(evidenceBoard,new LinearLayout.LayoutParams(-1,dp(490)));
+                card("INSTRUCCIONES","1. Toca una tarjeta. 2. Toca otra para crear el hilo. 3. Cambia el color antes de conectar. Las conexiones se guardan automáticamente.");
+                action("BORRAR TODOS LOS HILOS",()->new android.app.AlertDialog.Builder(this).setTitle("Limpiar tablero").setMessage("¿Quieres eliminar todas las conexiones de este expediente?").setNegativeButton("Cancelar",null).setPositiveButton("Eliminar",(d,w)->{connections.clear();persist();showPage("Tablero");}).show());
                 action("REVISAR PRUEBAS",()->showPage("Expediente"));
                 break;
             case "Cronología":
