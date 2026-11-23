@@ -1,0 +1,35 @@
+name: Validar proyecto Godot
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Importar y ejecutar en modo headless
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Godot 4.3
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.3.0
+          use-dotnet: false
+          include-templates: false
+
+      - name: Comprobar versión
+        run: godot --version
+
+      - name: Importar y validar scripts
+        run: godot --headless --editor --path . --quit
+
+      - name: Prueba de arranque
+        run: godot --headless --path . --quit-after 5
