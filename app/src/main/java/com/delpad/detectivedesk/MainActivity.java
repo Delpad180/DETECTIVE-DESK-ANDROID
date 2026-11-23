@@ -36,6 +36,7 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(bg);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         getPreferences(0).getStringSet("examined", new HashSet<>()).forEach(examined::add);
+        getPreferences(0).getStringSet("notes", new HashSet<>()).forEach(notes::add);
         buildShell();
         showPage("Inicio");
     }
