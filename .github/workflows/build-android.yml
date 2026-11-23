@@ -1,0 +1,94 @@
+name: Compilar APK Android
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    name: Exportar Detective Desk para Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Instalar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar componentes Android
+        run: |
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          yes | sdkmanager --licenses
+
+      - name: Instalar Godot 4.3 con plantillas de exportación
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.3.0
+          use-dotnet: false
+          include-templates: true
+
+      - name: Comprobar Godot
+        run: godot --version
+
+      - name: Preparar proyecto y configuración Android
+        shell: bash
+        run: |
+          mkdir -p build
+          cat > export_presets.cfg <<'EOF'
+          [preset.0]
+          name="Android"
+          platform="Android"
+          runnable=true
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="build/DetectiveDesk.apk"
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          encrypt_pck=false
+          encrypt_directory=false
+
+          [preset.0.options]
+          custom_template/debug=""
+          custom_template/release=""
+          gradle_build/use_gradle_build=false
+          gradle_build/gradle_build_directory=""
+          gradle_build/android_source_template=""
+          gradle_build/compress_native_libraries=false
+          architectures/armeabi-v7a=false
+          architectures/arm64-v8a=true
+          architectures/x86=false
+          architectures/x86_64=false
+          version/code=1
+          version/name="1.0.0"
+          package/unique_name="com.delpad.detectivedesk"
+          package/name="Detective Desk"
+          package/signed=true
+          EOF
+
+      - name: Importar recursos del proyecto
+        run: godot --headless --editor --path . --quit
+
+      - name: Exportar APK de depuración
+        run: godot --headless --path . --export-debug "Android" build/DetectiveDesk.apk
+
+      - name: Publicar APK como artefacto descargable
+        uses: actions/upload-artifact@v4
+        with:
+          name: Detective-Desk-Android-debug
+          path: build/DetectiveDesk.apk
+          if-no-files-found: error
+          retention-days: 14
