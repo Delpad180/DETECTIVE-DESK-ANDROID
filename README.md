@@ -20,6 +20,10 @@ Implementado en el proyecto:
 - Guardado y carga local del progreso mediante user://detective_desk_save.cfg.
 - Cierre administrativo condicionado a revisar las pruebas y registrar deducciones. El juego no declara culpable a ningún sospechoso con los indicios actuales.
 
+## Validación automática
+
+El repositorio incluye un flujo de GitHub Actions que instala Godot 4.3, importa el proyecto y realiza una prueba de arranque sin interfaz gráfica en cada push y pull request. La existencia del flujo no significa que la compilación haya pasado: el resultado debe consultarse en la pestaña Actions.
+
 ## Requisitos
 
 - Godot 4.3 o posterior.
