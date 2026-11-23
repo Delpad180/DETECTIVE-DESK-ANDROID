@@ -34,10 +34,39 @@ var evidence := [
     {"id":"print", "name":"Huella parcial", "detail":"Fragmento recuperado del pomo interior. La muestra no permite una identificación concluyente.", "analysis":"La huella necesita una muestra de referencia y un análisis comparativo. No permite atribución individual por sí sola.", "category":"Dactiloscopia"}
 ]
 
+var startup_fallback: Control
+
 func _ready() -> void:
+    # Mostrar una pantalla de arranque visible antes de construir la interfaz.
+    # Si algo falla durante la inicialización, el usuario no se queda ante una pantalla negra.
+    set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    RenderingServer.set_default_clear_color(BG)
+    startup_fallback = Control.new()
+    startup_fallback.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    add_child(startup_fallback)
+
+    var splash := ColorRect.new()
+    splash.color = BG
+    splash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    startup_fallback.add_child(splash)
+
+    var message := Label.new()
+    message.text = "DETECTIVE DESK\\n\\nINICIANDO UNIDAD DE HOMICIDIOS..."
+    message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    message.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    message.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    message.add_theme_color_override("font_color", ACCENT)
+    message.add_theme_font_size_override("font_size", 22)
+    startup_fallback.add_child(message)
+
+    call_deferred("_initialize_game")
+
+func _initialize_game() -> void:
     _load_game()
     _build_ui()
     open_page("Inicio")
+    if is_instance_valid(startup_fallback):
+        startup_fallback.queue_free()
 
 func _style(color: Color, radius := 9) -> StyleBoxFlat:
     var s := StyleBoxFlat.new()
