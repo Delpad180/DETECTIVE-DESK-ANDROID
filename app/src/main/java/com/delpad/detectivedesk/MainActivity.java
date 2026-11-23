@@ -215,7 +215,7 @@ public class MainActivity extends Activity {
             String.format(Locale.ROOT,"%02d:%02d — "+eventNames[4],h,(m+24)%60),
             String.format(Locale.ROOT,"%02d:%02d — "+eventNames[5],h,(m+35)%60)
         };
-        examined.clear();unlocked.clear();notes.clear();log.clear();
+        examined.clear();unlocked.clear();notes.clear();log.clear();connections.clear();
         pressure.clear();questions.clear();for(int i=0;i<3;i++){pressure.put(i,0);questions.put(i,0);}
         persist();
     }
