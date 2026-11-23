@@ -15,9 +15,9 @@ var selected_suspect := 0
 var current_page := "Inicio"
 var stress := [18, 18, 18]
 var chats: Array = [[], [], []]
-var examined_ids: Array[String] = []
-var deductions: Array[String] = []
-var case_notes: Array[String] = []
+var examined_ids: Array = []
+var deductions: Array = []
+var case_notes: Array = []
 var case_closed := false
 
 var suspects := [
@@ -392,7 +392,12 @@ func _page_board() -> void:
         for item in deductions:
             _card("DEDUCCIÓN REGISTRADA", item)
     if case_notes.size() > 0:
-        _card("ÚLTIMAS NOTAS", "\n".join(case_notes.slice(maxi(0, case_notes.size() - 5), case_notes.size())))
+        var recent_notes := ""
+        for i in range(maxi(0, case_notes.size() - 5), case_notes.size()):
+            if not recent_notes.is_empty():
+                recent_notes += "\n"
+            recent_notes += str(case_notes[i])
+        _card("ÚLTIMAS NOTAS", recent_notes)
 
 func _register_deduction(note: String) -> void:
     if deductions.has(note):
