@@ -12,14 +12,6 @@ import android.content.Context;
 import android.widget.*;
 import android.text.InputType;
 import java.util.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.io.*;
-import org.json.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import android.os.Handler;
-import android.os.Looper;
 
 public class MainActivity extends Activity {
     private final int bg=Color.rgb(8,15,25), panel=Color.rgb(18,31,47), panel2=Color.rgb(25,42,61),
@@ -55,11 +47,6 @@ public class MainActivity extends Activity {
     };
     private final String[] timeline={"22:51 — Apertura registrada con credencial de mantenimiento","22:58 — Llamada desde número prepago","23:10–23:35 — Intervalo médico estimado","23:17 — Figura captada junto al muelle","23:40 — Hallazgo y aviso a emergencias"};
     private EditText questionInput;
-    private String serverUrl="";
-    private boolean aiBusy=false;
-    private final ExecutorService network=Executors.newSingleThreadExecutor();
-    private final Handler mainHandler=new Handler(Looper.getMainLooper());
-    private JSONArray aiHistory=new JSONArray();
 
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
@@ -68,8 +55,6 @@ public class MainActivity extends Activity {
         examined.addAll(getPreferences(0).getStringSet("examined",new HashSet<>()));
         unlocked.addAll(getPreferences(0).getStringSet("unlocked",new HashSet<>()));
         notes.addAll(getPreferences(0).getStringSet("notes",new HashSet<>()));
-        serverUrl=getPreferences(0).getString("ai_server_url","");
-        try{aiHistory=new JSONArray(getPreferences(0).getString("ai_history","[]"));}catch(Exception ignored){}
         for(int i=0;i<3;i++){pressure.put(i,0);questions.put(i,0);}
         buildShell(); showPage("Inicio");
     }
@@ -91,7 +76,7 @@ public class MainActivity extends Activity {
         LinearLayout row=new LinearLayout(this);root.addView(row,new LinearLayout.LayoutParams(-1,0,1));
         ScrollView menuScroll=new ScrollView(this);row.addView(menuScroll,new LinearLayout.LayoutParams(dp(155),-1));
         nav=column();nav.setPadding(dp(7),dp(9),dp(7),dp(9));menuScroll.addView(nav);
-        String[] pages={"Inicio","Expediente","Interrogatorios","Laboratorio","Tablero","Cronología","Notas","Informe","IA en línea"};
+        String[] pages={"Inicio","Expediente","Interrogatorios","Laboratorio","Tablero","Cronología","Notas","Informe","IA local"};
         for(String p:pages){Button b=button(p);b.setTextSize(12);b.setOnClickListener(v->showPage(p));nav.addView(b,margin(0,0,0,5));}
         ScrollView scroll=new ScrollView(this);row.addView(scroll,new LinearLayout.LayoutParams(0,-1,1));
         content=column();content.setPadding(dp(10),dp(7),dp(14),dp(12));scroll.addView(content);
@@ -158,13 +143,10 @@ public class MainActivity extends Activity {
                 action("GUARDAR NOTA",()->{String s=note.getText().toString().trim();if(!s.isEmpty()){notes.add(s);persist();showPage("Notas");}});
                 for(String s:notes)card("ANOTACIÓN",s);
                 break;
-            case "IA en línea":
-                card("ASISTENTE CONECTADO","La IA usa un servidor seguro y puede consultar información pública en Internet. La clave del proveedor permanece en el servidor, nunca en esta aplicación.");
-                card("ESTADO DEL SERVIDOR",serverUrl.isEmpty()?"No configurado. Introduce la dirección HTTPS de tu servidor.":"Servidor configurado: "+serverUrl);
-                EditText endpoint=new EditText(this);endpoint.setSingleLine(true);endpoint.setTextColor(white);endpoint.setHintTextColor(muted);endpoint.setHint("https://tu-servidor.example.com");endpoint.setText(serverUrl);endpoint.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);endpoint.setBackground(shape(panel2,10));content.addView(endpoint,margin(0,0,0,7));
-                action("GUARDAR DIRECCIÓN DEL SERVIDOR",()->{String u=endpoint.getText().toString().trim().replaceAll("/+$","");if(!u.startsWith("https://")){Toast.makeText(this,"Introduce una dirección HTTPS válida.",Toast.LENGTH_LONG).show();return;}serverUrl=u;getPreferences(0).edit().putString("ai_server_url",serverUrl).apply();showPage("IA en línea");});
-                action("PROBAR CONEXIÓN",()->{String u=endpoint.getText().toString().trim().replaceAll("/+$","");if(!u.startsWith("https://")){Toast.makeText(this,"Guarda primero una dirección HTTPS.",Toast.LENGTH_SHORT).show();return;}testServer(u);});
-                card("CAPACIDADES","• Responder preguntas abiertas y generales.\n• Consultar la web para información actual.\n• Analizar las pruebas y declaraciones del caso.\n• Recordar el contexto reciente del interrogatorio.\n\nNecesita conexión a Internet y un servidor activo.");
+            case "IA local":
+                card("ASISTENTE DE INVESTIGACIÓN LOCAL","Motor de respuestas integrado en el juego. No necesita Internet, servidor, cuenta externa ni clave API.");
+                card("FUNCIONES DISPONIBLES","• Interrogatorios con respuestas según la identidad y el perfil de cada sospechoso.\n• Preguntas sobre horarios, coartadas, accesos, llamadas, cámaras y pruebas.\n• Respuestas que distinguen hechos confirmados de hipótesis.\n• Historial de preguntas durante la sesión.\n\nLimitación: no es un modelo generativo conectado a Internet; responde utilizando la información y las reglas incluidas en el expediente.");
+                action("ABRIR INTERROGATORIOS",()->showPage("Interrogatorios"));
                 break;
             case "Informe":
                 card("INFORME PROVISIONAL DE INVESTIGACIÓN","Expediente RPD-026-114\nVíctima: Daniel Ortega\nPruebas examinadas: "+examined.size()+"/"+evidence.length+"\nPersonas entrevistadas: "+unlocked.size()+"/3");
@@ -213,72 +195,10 @@ public class MainActivity extends Activity {
         ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(questionInput.getWindowToken(),0);
         questions.put(suspect,questions.get(suspect)+1);pressure.put(suspect,pressure.get(suspect)+1);
         questionInput.setText("");
-        if(serverUrl.isEmpty()){
-            String answer=generateAnswer(q,suspect);
-            log.add("S"+suspect+"|PREGUNTA: "+q+"§RESPUESTA: "+answer);
-            if(log.size()>90)log.remove(0);
-            interview(suspect);card("RESPUESTA LOCAL (SIN SERVIDOR)",answer);
-        }else{
-            interview(suspect);
-            card("IA EN LÍNEA","Consultando al servidor…");
-            requestRemoteAnswer(q,suspect);
-        }
-    }
-    private void testServer(String base){
-        Toast.makeText(this,"Comprobando servidor…",Toast.LENGTH_SHORT).show();
-        network.execute(()->{
-            boolean ok=false;String message="No se pudo conectar.";
-            try{HttpURLConnection conn=(HttpURLConnection)new URL(base+"/health").openConnection();conn.setRequestMethod("GET");conn.setConnectTimeout(10000);conn.setReadTimeout(10000);int code=conn.getResponseCode();ok=code==200;message=ok?"Servidor disponible.":"El servidor respondió con código "+code;conn.disconnect();}catch(Exception e){message="Error de conexión: "+e.getMessage();}
-            final boolean success=ok;final String result=message;
-            mainHandler.post(()->Toast.makeText(this,result,Toast.LENGTH_LONG).show());
-        });
-    }
-    private void requestRemoteAnswer(String question,int who){
-        if(aiBusy)return;aiBusy=true;
-        final String base=serverUrl;
-        final String historyJson=aiHistory.toString();
-        network.execute(()->{
-            String answer=null,error=null;
-            HttpURLConnection conn=null;
-            try{
-                JSONObject body=new JSONObject();
-                body.put("question",question);
-                body.put("suspect",names[who]);
-                body.put("suspect_profile",profiles[who]);
-                body.put("case_context","Expediente RPD-026-114: Muerte en el Almacén 7. Víctima Daniel Ortega, 42 años. Pruebas examinadas: "+knownEvidenceSummary()+". Hechos y fichas: "+String.join(" | ",Arrays.asList(details))+". Cronología: "+String.join(" | ",Arrays.asList(timeline))+". Notas del investigador: "+String.join(" | ",notes));
-                body.put("history",new JSONArray(historyJson));
-                conn=(HttpURLConnection)new URL(base+"/api/chat").openConnection();
-                conn.setRequestMethod("POST");conn.setConnectTimeout(15000);conn.setReadTimeout(90000);
-                conn.setDoOutput(true);conn.setRequestProperty("Content-Type","application/json; charset=utf-8");
-                byte[] payload=body.toString().getBytes("UTF-8");
-                conn.getOutputStream().write(payload);
-                int code=conn.getResponseCode();
-                InputStream stream=code>=200&&code<300?conn.getInputStream():conn.getErrorStream();
-                ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buf=new byte[4096];int n;
-                while((n=stream.read(buf))!=-1)out.write(buf,0,n);
-                JSONObject response=new JSONObject(out.toString("UTF-8"));
-                if(code>=200&&code<300){
-                    answer=response.optString("answer","El servidor no devolvió una respuesta.");
-                    aiHistory.put(new JSONObject().put("role","user").put("content",question));
-                    aiHistory.put(new JSONObject().put("role","assistant").put("content",answer));
-                    while(aiHistory.length()>16){JSONArray trimmed=new JSONArray();for(int i=aiHistory.length()-16;i<aiHistory.length();i++)trimmed.put(aiHistory.get(i));aiHistory=trimmed;}
-                    getPreferences(0).edit().putString("ai_history",aiHistory.toString()).apply();
-                }else error=response.optString("error","Error HTTP "+code);
-                stream.close();
-            }catch(Exception e){error="No se pudo contactar con la IA: "+e.getMessage();}
-            finally{if(conn!=null)conn.disconnect();}
-            final String result=answer,problem=error;
-            mainHandler.post(()->{
-                aiBusy=false;
-                if(result!=null){
-                    log.add("S"+who+"|PREGUNTA: "+question+"§RESPUESTA: "+result);if(log.size()>90)log.remove(0);
-                    interview(who);card("RESPUESTA DE LA IA EN LÍNEA",result);
-                }else{
-                    interview(who);card("ERROR DE CONEXIÓN",problem==null?"No se recibió respuesta.":problem);
-                    action("REINTENTAR PREGUNTA",()->{questionInput.setText(question);askQuestion();});
-                }
-            });
-        });
+        String answer=generateAnswer(q,suspect);
+        log.add("S"+suspect+"|PREGUNTA: "+q+"§RESPUESTA: "+answer);
+        if(log.size()>90)log.remove(0);
+        interview(suspect);card("RESPUESTA DEL ASISTENTE LOCAL",answer);
     }
     private String generateAnswer(String raw,int who){
         String q=raw.toLowerCase(Locale.ROOT);
